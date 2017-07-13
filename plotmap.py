@@ -59,11 +59,11 @@ def map_2_img(data,plot=False):
     arraytry=np.ndarray(shape=(1201,1201,3), dtype=float, order='F')
     #ghetto scale to 8 bit, set green channel to inverted heightmap, so brighter is higher       
     #normallize   float(np.amax(data)) 
-    arraytry[:,:,1]=data/2500.0
+    arraytry[:,:,1]=data/3500.0
     #zerray= np.zeros(1024,1024)
     for line in range(len(data)):
         for point in range (len(data[0])):
-            if data[line][point]<1:
+            if data[line][point]<1.0:
                 arraytry[line,point,2]=1
             
     if plot==True:

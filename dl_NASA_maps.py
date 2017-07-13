@@ -56,21 +56,14 @@ def unzip_draw(filelist):
     
     return zfn,map_2_img(cleandatas(data))
 
-#maps=[]
-#for item in file_list[1878:1881]+file_list[1743:1746]:
-#    maps.append(unzip_draw(item)[1])
-#gridmap(maps,3,3)
 
+#function for finding map tiles in the file list.  missing tiles are returned as an all 0 elevation tile
 def latlondata(latlon,ll):
     for i in range(0,len(ll)-1):            
         if latlon[1] == ll[i][1] and latlon[3] == ll[i][3] and latlon[0] == ll[i][0] and latlon[2] == ll[i][2]:
             return ll[i][4]
-        
+
         
     
-
-def choosemaptiles():
-    map_list=['N37E021','N37E022','N37E023','N36E021','N36E022','N36E023','N35E021','N35E022','N35E023']
-
 #ll,file_list=getfilelist()
 #fl=latlondata(('S',10,'W',158),ll)

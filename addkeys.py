@@ -10,31 +10,101 @@ from dl_NASA_maps import *
 import pyglet
 import os.path
 
-reqstr='N37E021'
-imgstr=reqstr+".png"
-if os.path.isfile(imgstr) is False:
-    ll,file_list=getfilelist()
-    fl=file_list[latlondata((reqstr[0],int(reqstr[1:3]),reqstr[3],int(reqstr[4:8])),ll)]
-    img=unzip_draw(fl)[1]
-    mountain = pyglet.image.load("C:\Users\Doug\Desktop\mapmakes\mountain.png").get_image_data()
-    data=mountain.get_data('RGB',mountain.width*3)
-    imgconvert=(img*256).astype(np.uint8).tobytes()
-    imgmap=pyglet.image.ImageData(1201,1201,'RGB',imgconvert,1201*3)
-    imgmap.save(imgstr)
+class MapTile(pyglet.sprite.Sprite):
+    def __init__(self, *args, **kwargs): 
+        super(MapTile, self).__init__(*args, **kwargs)
+        self.xoff=0
+        self.yoff=0
+        self.origin=False
+#    def update(self, dt): 
+#        self.x += self.velocity_x * dt 
+#        self.y += self.velocity_y * dt
+
+reqstr=[]
+origin='N35E021'
+
+
+#calc origin
+if  origin[0]=='N':
+    yorigin=1*int(origin[1:3])
 else:
-    imgmap=pyglet.image.load(imgstr)
+    yorigin=-1*int(origin[1:3])
+if  origin[3]=='E':
+    xorigin=1*int(origin[4:8])
+else:
+    xorigin=-1*int(origin[4:8])
+
+def namefromorigdist(xorigin,yorigin,xdist,ydist):
+    name=str()    
+    print xdist,ydist    
+    if ydist-yorigin>=0:
+        name=name+'N'
+    else:
+        name=name+'S'
+    name=name+"{0:02d}".format(abs(ydist))
+    if xdist-xorigin>=0:
+        name=name+'E'
+    else:
+        name=name+'W'
+    name=name+"{0:03d}".format(abs(xdist))
+    return name
     
-image_part = imgmap.get_region(x=1, y=1, width=1000, height=1000)
-sprite = pyglet.sprite.Sprite(image_part)
-sprite.x=0
-sprite.y=0
+tiling_distance=12
+for i in range(0,tiling_distance):
+    for j in range(0,tiling_distance):
+        reqstr.append(namefromorigdist(xorigin,yorigin,xorigin+i,yorigin+j))
+        
+print reqstr
+#qreqstr=reqstr
+#reqstr=['N37E021','N37E022','N37E023','N38E021','N38E022','N38E023','N36E021','N36E022','N36E023']
+
 sprites=[]
-sprites.append(sprite)
+ll,file_list=getfilelist()
+for reqst in reqstr:
+    #check if file already DL'ed. if not, DL and save png  
+    imgstr=reqst+".png"
+    if os.path.isfile(imgstr) is False:
+        fileindex=latlondata((reqst[0],int(reqst[1:3]),reqst[3],int(reqst[4:8])),ll)        
+        if fileindex is not None:        
+            fl=file_list[latlondata((reqst[0],int(reqst[1:3]),reqst[3],int(reqst[4:8])),ll)]
+            img=unzip_draw(fl)[1]
+        else:
+            img=np.concatenate((np.zeros((1201,1201,2)),np.ones((1201,1201,1))),axis=2)
+        imgconvert=(img*255).astype(np.uint8).tobytes()
+        imgmap=pyglet.image.ImageData(1201,1201,'RGB',imgconvert,1201*3)
+        imgmap.save(imgstr)
+    else:
+        imgmap=pyglet.image.load(imgstr)
     
+    #calc map offsetting
+    if  reqst[0]=='N':
+        yoff=1*int(reqst[1:3])
+    else:
+        yoff=-1*int(reqst[1:3])
+    if  reqst[3]=='E':
+        xoff=1*int(reqst[4:8])
+    else:
+        xoff=-1*int(reqst[4:8])
+
+    yoffori=yorigin-yoff
+    xoffori=xorigin-xoff
     
+    image_part = imgmap.get_region(x=0, y=0, width=1201, height=1201)
+    #create sprite at offset    
+    mtile = MapTile(image_part)
+    mtile.x=-xoffori*1201
+    mtile.y=yoffori*1201
+    mtile.xoff=-xoffori
+    mtile.yoff=yoffori
+    if mtile.xoff == 0 and mtile.yoff == 0:
+        mtile.origin=True
+    sprites.append(mtile)
+    origin=sprites[0]
+
+        
 class HelloWorldWindow(pyglet.window.Window):
     def __init__(self):
-        super(HelloWorldWindow, self).__init__(1000,1000)
+        super(HelloWorldWindow, self).__init__(1900,1000)
 
         self.label = pyglet.text.Label('Hello, KIRA!')
         self.zoomdist=0
@@ -55,7 +125,14 @@ class HelloWorldWindow(pyglet.window.Window):
             if self.zoomdist>10:
                 self.zoomdist=10
         for sprite in sprites:
-            sprite.scale=(1-self.zoomdist*.1) 
+            sprite.scale=(1-self.zoomdist*.1)
+            print sprite.x,sprite.y,sprite.width,sprite.height,sprite.xoff,sprite.yoff
+            if sprite.xoff != 0:
+                sprite.x=sprite.width*sprite.xoff+origin.x
+            if sprite.yoff != 0:
+                sprite.y=sprite.height*sprite.yoff+origin.y
+            print "after"
+            print sprite.x,sprite.y,sprite.width,sprite.height
 
 #    def on_key_press(self,key,modifiers):
 #        if key==pyglet.window.key.LEFT:
@@ -71,13 +148,17 @@ class HelloWorldWindow(pyglet.window.Window):
         # Move 10 pixels per second
         #sprite.x += dt * 10
         if keys[pyglet.window.key.LEFT]:
-            sprite.x=sprite.x+10;
+            for sprite in sprites:            
+                sprite.x=sprite.x+10;
         if keys[pyglet.window.key.RIGHT]:
-            sprite.x=sprite.x-10;
+            for sprite in sprites:
+                sprite.x=sprite.x-10;
         if keys[pyglet.window.key.DOWN]:
-            sprite.y=sprite.y+10;
+            for sprite in sprites:
+                sprite.y=sprite.y+10;
         if keys[pyglet.window.key.UP]:
-            sprite.y=sprite.y-10;
+            for sprite in sprites:
+                sprite.y=sprite.y-10;
         
         pass
     pyglet.clock.schedule_interval(update, 1/60.)
