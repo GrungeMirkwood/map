@@ -21,7 +21,7 @@ class MapTile(pyglet.sprite.Sprite):
 #        self.y += self.velocity_y * dt
 
 reqstr=[]
-origin='N35E021'
+origin='N36E021'
 
 
 #calc origin
@@ -49,7 +49,7 @@ def namefromorigdist(xorigin,yorigin,xdist,ydist):
     name=name+"{0:03d}".format(abs(xdist))
     return name
     
-tiling_distance=12
+tiling_distance=15
 for i in range(0,tiling_distance):
     for j in range(0,tiling_distance):
         reqstr.append(namefromorigdist(xorigin,yorigin,xorigin+i,yorigin+j))
@@ -57,9 +57,13 @@ for i in range(0,tiling_distance):
 print reqstr
 #qreqstr=reqstr
 #reqstr=['N37E021','N37E022','N37E023','N38E021','N38E022','N38E023','N36E021','N36E022','N36E023']
-
 sprites=[]
-ll,file_list=getfilelist()
+for reqst in reqstr:
+    #check if file already DL'ed. if not, DL and save png  
+    imgstr=reqst+".png"
+    if os.path.isfile(imgstr) is False:
+        print "getting filelist"
+        ll,file_list=getfilelist()
 for reqst in reqstr:
     #check if file already DL'ed. if not, DL and save png  
     imgstr=reqst+".png"
@@ -71,7 +75,7 @@ for reqst in reqstr:
         else:
             img=np.concatenate((np.zeros((1201,1201,2)),np.ones((1201,1201,1))),axis=2)
         imgconvert=(img*255).astype(np.uint8).tobytes()
-        imgmap=pyglet.image.ImageData(1201,1201,'RGB',imgconvert,1201*3)
+        imgmap=pyglet.image.ImageData(1201,1201,'RGB',imgconvert,-1201*3)
         imgmap.save(imgstr)
     else:
         imgmap=pyglet.image.load(imgstr)
@@ -93,9 +97,9 @@ for reqst in reqstr:
     #create sprite at offset    
     mtile = MapTile(image_part)
     mtile.x=-xoffori*1201
-    mtile.y=yoffori*1201
+    mtile.y=-yoffori*1201
     mtile.xoff=-xoffori
-    mtile.yoff=yoffori
+    mtile.yoff=-yoffori
     if mtile.xoff == 0 and mtile.yoff == 0:
         mtile.origin=True
     sprites.append(mtile)
@@ -118,22 +122,27 @@ class HelloWorldWindow(pyglet.window.Window):
         #print repr(x)+" "+repr(y)+" "+repr(scroll_x)+" "+repr(scroll_y)+" "    
         if scroll_y==-1:
             self.zoomdist=self.zoomdist-1
-            if self.zoomdist<-20:
-                self.zoomdist=-20
+            if self.zoomdist<-25:
+                self.zoomdist=-25
         elif scroll_y==1:
             self.zoomdist=self.zoomdist+1
-            if self.zoomdist>10:
-                self.zoomdist=10
+            if self.zoomdist>20:
+                self.zoomdist=20
         for sprite in sprites:
-            sprite.scale=(1-self.zoomdist*.1)
-            print sprite.x,sprite.y,sprite.width,sprite.height,sprite.xoff,sprite.yoff
+            prevx=sprite.x
+            prevy=sprite.y
+            scale=(np.exp(self.zoomdist/4.0))
+            sprite.scale=scale
+            print sprite.x,sprite.y,sprite.width,sprite.height,sprite.xoff,sprite.yoff,x,y
             if sprite.xoff != 0:
                 sprite.x=sprite.width*sprite.xoff+origin.x
             if sprite.yoff != 0:
                 sprite.y=sprite.height*sprite.yoff+origin.y
             print "after"
             print sprite.x,sprite.y,sprite.width,sprite.height
-
+#        for sprite in sprites:
+#            sprite.y=sprite.y-(y-prevy)
+#            sprite.x=sprite.x-(x-prevx)
 #    def on_key_press(self,key,modifiers):
 #        if key==pyglet.window.key.LEFT:
 #            sprite.x=sprite.x-1;
@@ -161,7 +170,7 @@ class HelloWorldWindow(pyglet.window.Window):
                 sprite.y=sprite.y-10;
         
         pass
-    pyglet.clock.schedule_interval(update, 1/60.)
+    pyglet.clock.schedule_interval(update, 1/120.)
     # Call update 60 times a second
 
 
